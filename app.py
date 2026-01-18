@@ -31,7 +31,7 @@ def analyze_stock(ticker, start_date, end_date):
     # 处理多级索引
     prices = df_raw['Close'][ticker] if isinstance(df_raw.columns, pd.MultiIndex) else df_raw['Close']
     df = pd.DataFrame({'price': prices.dropna()})
-    
+
     # Log2 回归计算
     df['Time_Idx'] = np.arange(len(df))
     df['log_p'] = np.log2(df['price'])
@@ -41,45 +41,46 @@ def analyze_stock(ticker, start_date, end_date):
     model = LinearRegression().fit(X, y)
     df['trend_log'] = model.predict(X).ravel()
     sigma = np.std(df['log_p'] - df['trend_log'])
-    
+
     # 指标提取
     current_price = df['price'].iloc[-1]
     curr_trend_log = df['trend_log'].iloc[-1]
     z_score = (np.log2(current_price) - curr_trend_log) / sigma
-    
+
     # 年化指标
     ann_growth = (pow(2, model.coef_[0][0] * 252) - 1) * 100
     ann_vol = df['price'].pct_change().std() * np.sqrt(252) * 100
     # ann_growth = (pow(2, model.coef_[0][0] * 12) - 1) * 100
     # ann_vol = df['price'].pct_change().std() * np.sqrt(12) * 100
+    # max_draw = (1 - np.exp2(np.min(df['log_p'] - df['trend_log']))) * 100
+    max_draw = (1- np.min(df['price']/np.exp2(df['trend_log']))) * 100
     percentile = norm.cdf(z_score) * 100
 
     return {
-        "df": df, "z": z_score, "growth": ann_growth, "vol": ann_vol, 
+        "df": df, "z": z_score, "growth": ann_growth, "vol": ann_vol, "max_draw":max_draw,
         "price": current_price, "sigma": sigma, "trend_log": curr_trend_log,
         "percentile": percentile, "name": stock_name
     }
 
 def get_signal(z):
-    if z < -1.5: return "💎 强力买入", "purple"
-    elif -1.5 <= z < -0.5: return "🟢 逢低吸纳", "green"
-    elif -0.5 <= z <= 0.5: return "⚪ 持股观望", "gray"
-    elif 0.5 < z <= 1.5: return "🟠 逢高减持", "orange"
-    else: return "🚨 强力卖出", "red"
+    if z < -1.5: return "💎 强力买入 (Strong Buy)", "purple"
+    elif -1.5 <= z < -0.5: return "🟢 逢低吸纳 (Accumulate)", "green"
+    elif -0.5 <= z <= 0.5: return "⚪ 持股观望 (Hold)", "gray"
+    elif 0.5 < z <= 1.5: return "🟠 逢高减持 (Reduce)", "orange"
+    else: return "🚨 强力卖出 (Strong Sell)", "red"
 
 # --- 侧边栏控制面板 ---
 with st.sidebar:
     st.title("⚙️ 系统配置")
     with st.expander("数据筛选参数", expanded=True):
         tickers_input = st.text_area("输入代码 (请查询 [Yahoo Finance](https://finance.yahoo.com))", value="^STI,^HSI,^SPX,^NDX,000001.SS")
-        
-        # 恢复使用 date_input 并支持 50 年范围
+
         today = datetime.now()
         min_date = date(today.year - 50, 1, 1) # 允许选到 50 年前
-        
-        start_date = st.date_input("分析起点", value=date(today.year - 10, 1, 1), min_value=min_date)
-        end_date = st.date_input("分析终点", value=today, min_value=min_date)
-        
+
+        start_date = st.date_input("分析起点", value=date(today.year - 10, 1, 1), min_value=min_date, max_value=today)
+        end_date = st.date_input("分析终点", value=today, min_value=start_date, max_value=today)
+
         process_btn = st.button("看估值", width='stretch')
 
 # --- 主页面布局 ---
@@ -106,7 +107,7 @@ if process_btn:
         if summary_list:
             sum_df = pd.DataFrame(summary_list).sort_values("Z-Score")
             st.dataframe(sum_df, width='stretch', hide_index=True)
-    
+
     # 详细报告 (可折叠)
     st.write("### 📑 深度个股分析报告")
     for t in ticker_list:
@@ -126,14 +127,14 @@ if process_btn:
                     st.write("**价格参考区间**")
                     levels = [
                         ("极端泡沫(+2σ)", 2), ("溢价(+1σ)", 1), 
-                        ("中枢(0σ)", 0), ("低估(-1σ)", -1), ("极低估(-2σ)", -2)
+                        ("中枢", 0), ("低估(-1σ)", -1), ("极低估(-2σ)", -2)
                     ]
                     range_list = []
                     for label, zv in levels:
                         p = 2**(res['trend_log'] + zv * res['sigma'])
                         range_list.append({"位置": label, "价格": f"{p:.2f}"})
                     st.table(range_list)
-                    st.caption(f"波动率: {res['vol']:.1f}% | 历史分位: {res['percentile']:.1f}%")
+                    st.caption(f"波动率: {res['vol']:.1f}% | 历史分位: {res['percentile']:.1f}% | 历史最大偏离 {res['max_draw']:.1f}%")
 
                 with col_chart:
                     # 绘图逻辑：无 Legend，极简标题
@@ -141,17 +142,24 @@ if process_btn:
                     df = res['df']
                     ax.plot(df.index, df['price'], color='black', alpha=0.15, linewidth=1)
                     ax.plot(df.index, 2**df['trend_log'], color='#1E90FF', lw=2.5)
-                    
+
                     # 绘制 4 条标准差线
                     ax.plot(df.index, 2**(df['trend_log'] + 2*res['sigma']), color='red', ls='--', alpha=0.7)
                     ax.plot(df.index, 2**(df['trend_log'] + 1*res['sigma']), color='orange', ls='--', alpha=0.7)
                     ax.plot(df.index, 2**(df['trend_log'] - 1*res['sigma']), color='green', ls='--', alpha=0.7)
                     ax.plot(df.index, 2**(df['trend_log'] - 2*res['sigma']), color='purple', ls='--', alpha=0.7)
-                    
+
                     ax.set_yscale('log', base=2)
                     ax.set_title(f"{t} - {res['name']}", fontsize=18, fontweight='bold')
                     ax.grid(True, which='both', alpha=0.1)
                     st.pyplot(fig)
-            
+
+    st.info(f"""
+        ### 风险提示 (Risk Notice)
+        1. *本报告由量化脚本自动生成，不构成投资建议。*
+        2. **趋势反转风险**：均值回归假设了长期增长斜率不变，若公司基本面发生根本性恶化，均值线将失效。
+        3. **胖尾效应**：统计学假设是正态分布，但金融市场存在“胖尾”，即股价停留在极端区间（如 < -2σ）的时间可能远超预期。
+        4. **时间成本**：回归中枢可能需要数月甚至数年，不适合极短线投机。""")
+
 else:
     st.info("👋 请在左侧边栏配置日期跨度并点击看估值。")
