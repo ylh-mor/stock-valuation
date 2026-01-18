@@ -80,7 +80,7 @@ with st.sidebar:
         start_date = st.date_input("分析起点", value=date(today.year - 10, 1, 1), min_value=min_date)
         end_date = st.date_input("分析终点", value=today, min_value=min_date)
         
-        process_btn = st.button("开始量化巡检", width='stretch')
+        process_btn = st.button("看估值", width='stretch')
 
 # --- 主页面布局 ---
 st.title("🚀 股票估值看板")
@@ -154,4 +154,4 @@ if process_btn:
                     st.pyplot(fig)
             
 else:
-    st.info("👋 请在左侧侧边栏配置日期跨度并点击开始巡检。")
+    st.info("👋 请在左侧边栏配置日期跨度并点击看估值。")
