@@ -80,7 +80,7 @@ with st.sidebar:
         start_date = st.date_input("分析起点", value=date(today.year - 10, 1, 1), min_value=min_date)
         end_date = st.date_input("分析终点", value=today, min_value=min_date)
         
-        process_btn = st.button("开始量化巡检", use_container_width=True)
+        process_btn = st.button("开始量化巡检", width='stretch')
 
 # --- 主页面布局 ---
 st.title("🚀 股票估值看板")
@@ -105,7 +105,7 @@ if process_btn:
     with st.expander("📊 全市场价值汇总 (Summary Table)", expanded=True):
         if summary_list:
             sum_df = pd.DataFrame(summary_list).sort_values("Z-Score")
-            st.dataframe(sum_df, use_container_width=True, hide_index=True)
+            st.dataframe(sum_df, width='stretch', hide_index=True)
     
     # 详细报告 (可折叠)
     st.write("### 📑 深度个股分析报告")
