@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime, date
 
 # 页面配置
-st.set_page_config(page_title="均值回归系统 Pro", layout="wide")
+st.set_page_config(page_title="股票估值系统 Pro", layout="wide")
 
 # --- 核心算法 ---
 def get_stock_name(ticker):
@@ -83,7 +83,7 @@ with st.sidebar:
         process_btn = st.button("开始量化巡检", use_container_width=True)
 
 # --- 主页面布局 ---
-st.title("🚀 均值回归量化看板")
+st.title("🚀 股票估值看板")
 
 if process_btn:
     ticker_list = [t.strip().upper() for t in tickers_input.replace('\n', ',').split(',') if t.strip()]
