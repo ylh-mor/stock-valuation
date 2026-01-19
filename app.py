@@ -267,7 +267,7 @@ if process_btn:
 
                     # 获取价格范围来决定格式
                     max_price = df["price"].max()
-                    if max_price > 1000:
+                    if max_price > 100:
                         tick_format = ",.0f"
                     else:
                         tick_format = ".2f"
