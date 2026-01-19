@@ -202,7 +202,7 @@ if process_btn:
                             y=df["price"],
                             mode="lines",
                             name="价格",
-                            line=dict(color="rgba(0,0,0,0.3)", width=1),
+                            line=dict(color="blue", width=1),
                             hovertemplate="%{y:.2f}<extra></extra>",
                         )
                     )
@@ -265,12 +265,21 @@ if process_btn:
                         template="plotly_white",
                     )
 
+                    # 获取价格范围来决定格式
+                    max_price = df["price"].max()
+                    if max_price > 1000:
+                        tick_format = ",.0f"
+                    else:
+                        tick_format = ".2f"
                     # 添加网格
                     fig.update_xaxes(
                         showgrid=True, gridwidth=1, gridcolor="rgba(128,128,128,0.2)"
                     )
                     fig.update_yaxes(
-                        showgrid=True, gridwidth=1, gridcolor="rgba(128,128,128,0.2)"
+                        showgrid=True,
+                        gridwidth=1,
+                        gridcolor="rgba(128,128,128,0.2)",
+                        tickformat=tick_format,
                     )
 
                     st.plotly_chart(fig, width="stretch")
