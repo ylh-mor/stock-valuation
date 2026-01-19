@@ -8,6 +8,7 @@ dependencies = [
   "scikit-learn",
   "scipy",
   "matplotlib",
+  "plotly",
   "requests",
   "streamlit",
   "yfinance"
