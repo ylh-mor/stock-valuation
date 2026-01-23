@@ -275,7 +275,7 @@ if process_btn:
                                 text="仅供内部交流<br>For internal circulation only",
                                 textangle=-30,
                                 opacity=0.1,
-                                font=dict(color="black", size=60),
+                                font=dict(color="black", size=32),
                                 xref="paper",
                                 yref="paper",
                                 x=0.5,
