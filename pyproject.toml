@@ -13,3 +13,8 @@ dependencies = [
   "streamlit",
   "yfinance"
 ]
+[tool.poetry]
+name = "stock-val"
+version = "0.9.0"
+package-mode = false
+
