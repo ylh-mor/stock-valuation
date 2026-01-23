@@ -67,7 +67,10 @@ def analyze_stock(ticker, start_date, end_date):
     # ann_growth = (pow(2, model.coef_[0][0] * 12) - 1) * 100
     # ann_vol = df['price'].pct_change().std() * np.sqrt(12) * 100
     # max_draw = (1 - np.exp2(np.min(df['log_p'] - df['trend_log']))) * 100
-    max_bias = (1 - np.min(df["price"] / np.exp2(df["trend_log"]))) * 100
+    bias = df["price"] / np.exp2(df["trend_log"])
+    max_bias_neg = (np.min(bias) - 1) * 100
+    max_bias_pos = (np.max(bias) - 1) * 100
+    curr_bias = (bias.iloc[-1] - 1) * 100
     percentile = norm.cdf(z_score) * 100
 
     return {
@@ -75,7 +78,9 @@ def analyze_stock(ticker, start_date, end_date):
         "z": z_score,
         "growth": ann_growth,
         "vol": ann_vol,
-        "max_bias": max_bias,
+        "curr_bias": curr_bias,
+        "max_bias_neg": max_bias_neg,
+        "max_bias_pos": max_bias_pos,
         "price": current_price,
         "sigma": sigma,
         "trend_log": curr_trend_log,
@@ -145,7 +150,7 @@ if process_btn:
                         "名称": data["name"],
                         "当前价": f"{data['price']:.2f}",
                         "Z-Score": round(data["z"], 2),
-                        "历史分位": f"{data['percentile']:.1f}%",
+                        "当前分位": f"{data['percentile']:.1f}%",
                         "年化增长": f"{data['growth']:.1f}%",
                         "评级": sig,
                     }
@@ -185,27 +190,16 @@ if process_btn:
                     for label, zv in levels:
                         p = 2 ** (res["trend_log"] + zv * res["sigma"])
                         range_list.append({"位置": label, "价格": f"{p:.2f}"})
-                    st.table(range_list)
+                    range_df = pd.DataFrame(range_list)
+                    st.table(range_df.set_index("位置"))
                     st.caption(
-                        f"波动率: {res['vol']:.1f}% | 历史分位: {res['percentile']:.1f}% | 历史最大偏离 {res['max_bias']:.1f}%"
+                        f"波动率: {res['vol']:.1f}% | 当前分位: {res['percentile']:.1f}% | 当前偏离率 {res['curr_bias']:.1f}% | 历史偏离率 [ {res['max_bias_neg']:.1f}%, {res['max_bias_pos']:.1f}% ]"
                     )
 
                 with col_chart:
                     # 创建交互式图表
                     fig = go.Figure()
                     df = res["df"]
-
-                    # 添加实际价格线
-                    fig.add_trace(
-                        go.Scatter(
-                            x=df.index,
-                            y=df["price"],
-                            mode="lines",
-                            name="价格",
-                            line=dict(color="blue", width=1),
-                            hovertemplate="%{y:.2f}<extra></extra>",
-                        )
-                    )
 
                     # 添加趋势线
                     fig.add_trace(
@@ -226,7 +220,6 @@ if process_btn:
                         (-1, "green", "低估 (-1σ)"),
                         (-2, "purple", "极低估 (-2σ)"),
                     ]
-
                     for sigma_val, color, name in sigma_lines:
                         fig.add_trace(
                             go.Scatter(
@@ -239,6 +232,18 @@ if process_btn:
                                 hovertemplate="%{y:.2f}<extra></extra>",
                             )
                         )
+
+                    # 添加实际价格线
+                    fig.add_trace(
+                        go.Scatter(
+                            x=df.index,
+                            y=df["price"],
+                            mode="lines",
+                            name="价格",
+                            line=dict(color="blue", width=1),
+                            hovertemplate="%{y:.2f}<extra></extra>",
+                        )
+                    )
 
                     # 设置布局
                     fig.update_layout(
@@ -263,6 +268,21 @@ if process_btn:
                         ),
                         hovermode="x unified",
                         template="plotly_white",
+                        # 添加水印
+                        annotations=[
+                            dict(
+                                name="watermark",
+                                text="仅供内部交流<br>For internal circulation only",
+                                textangle=-30,
+                                opacity=0.1,
+                                font=dict(color="black", size=60),
+                                xref="paper",
+                                yref="paper",
+                                x=0.5,
+                                y=0.5,
+                                showarrow=False,
+                            )
+                        ],
                     )
 
                     # 获取价格范围来决定格式
